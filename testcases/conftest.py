@@ -21,6 +21,7 @@ Scope 说明:
 """
 import pytest
 
+from api.chat_api import ChatAPI
 from api.plan_api import PlanAPI
 from api.settlement_api import SettlementAPI
 from api.statistics_api import StatisticsAPI
@@ -98,3 +99,13 @@ def statistics_api(runner_client):
     已包含用户认证头，可直接调用统计相关的所有接口。
     """
     return StatisticsAPI(runner_client)
+
+
+@pytest.fixture(scope="session")
+def chat_api(runner_client):
+    """
+    AI 对话模块 API
+
+    已包含用户认证头，可直接调用对话相关的所有接口。
+    """
+    return ChatAPI(runner_client)
