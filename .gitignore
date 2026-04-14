@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project Specific
+logs/*.log
+reports/allure-results/*
+reports/allure-report/*
+!reports/allure-results/.gitkeep
+!reports/allure-report/.gitkeep
+
+# Environment
+.env
+*.local
+
+# Test artifacts
+*.pyc
+.pytest_cache/
+htmlcov/
+.coverage
+
+# API docs raw data (可从 Swagger 重新获取)
+testdata/api_docs_raw.json
+
+# 旧配置文件 (已迁移到 base + env 模式)
+config/env_config.yaml

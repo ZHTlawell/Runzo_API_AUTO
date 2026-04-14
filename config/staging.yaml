@@ -1,0 +1,19 @@
+# ============================================================
+# 预发布环境配置（覆盖 base.yaml 中的差异项）
+# ============================================================
+
+# turing-runner 跑步核心服务
+base_url: "https://tsapiv1.shasoapp.com/turing-runner"
+
+# turing-user-center 用户认证服务
+user_center_url: "https://tsapiv1.shasoapp.com/turing-user-center"
+
+# MongoDB 连接（仅覆盖 uri，db_name 沿用 base）
+mongodb:
+  uri: "mongodb://rwuser:hYEB%3D%23y3tyiZyYex2C0M@123.60.41.195:8635/echo?authSource=admin&directConnection=true"
+
+# 预发布环境请求超时适当放宽
+timeout: 60
+
+# 预发布环境使用 INFO 日志
+log_level: "INFO"

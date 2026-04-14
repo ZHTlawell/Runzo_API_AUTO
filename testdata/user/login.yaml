@@ -1,0 +1,30 @@
+# 用户登录测试数据
+- case_id: "login_001"
+  title: "正常登录"
+  data:
+    username: "admin"
+    password: "admin123"
+  expected:
+    status_code: 200
+    json_path: "$.code"
+    value: 0
+
+- case_id: "login_002"
+  title: "登录失败 - 密码错误"
+  data:
+    username: "admin"
+    password: "wrong_password"
+  expected:
+    status_code: 401
+    json_path: "$.code"
+    value: -1
+
+- case_id: "login_003"
+  title: "登录失败 - 用户不存在"
+  data:
+    username: "nonexistent_user"
+    password: "Test@12345"
+  expected:
+    status_code: 401
+    json_path: "$.code"
+    value: -1

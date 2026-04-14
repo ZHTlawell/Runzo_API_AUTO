@@ -1,0 +1,27 @@
+# Core
+requests>=2.31.0
+pytest>=7.4.0
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Pytest Plugins
+pytest-xdist>=3.5.0
+pytest-rerunfailures>=13.0
+allure-pytest>=2.13.0
+
+# Data Processing
+jsonpath-ng>=1.6.0
+jsonschema>=4.20.0
+faker>=22.0.0
+
+# Database
+pymongo>=4.6.0
+
+# Logging
+loguru>=0.7.0
+
+# Performance Testing
+locust>=2.20.0
+
+# Notifications
+requests>=2.31.0

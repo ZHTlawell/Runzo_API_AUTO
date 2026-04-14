@@ -1,0 +1,16 @@
+# ============================================================
+# 测试环境配置（覆盖 base.yaml 中的差异项）
+# ============================================================
+
+# turing-runner 跑步核心服务
+base_url: "https://tsapiv1-test.shasoapp.com/turing-runner"
+
+# turing-user-center 用户认证服务
+user_center_url: "https://tsapiv1-test.shasoapp.com/turing-user-center"
+
+# MongoDB 连接（仅覆盖 uri，db_name 沿用 base）
+mongodb:
+  uri: "mongodb://rwuser:Z3jaDyu*c!ZVKm*GBgpb@1.94.8.122:8004/echo?authSource=admin&directConnection=true"
+
+# 测试环境开启 DEBUG 日志
+log_level: "DEBUG"

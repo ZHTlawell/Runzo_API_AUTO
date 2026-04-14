@@ -1,0 +1,161 @@
+# ============================================================
+# 训练计划生成 - 测试数据
+# ============================================================
+# 用于 POST /runzo/plan/generate 接口的参数化测试数据
+#
+# GeneratePlanDTO 字段说明:
+#   - gender: 性别 (0=女, 1=男)
+#   - heightValue/heightUnit: 身高 (cm/inch)
+#   - weightValue/weightUnit: 体重 (kg/lb)
+#   - trainingGoal: 训练目标 (5km/10km/half_marathon/full_marathon/custom)
+#   - planCompletionWeeks: 计划总周数
+#   - trainingSchedule: 每周训练日 (MONDAY~SUNDAY)
+#   - lsdSchedule: 长距离跑安排日
+#   - age: 年龄
+#   - trainingHistory: 历史训练数据
+#   - intensity: 训练强度 (high/medium/low)
+# ============================================================
+
+# ------ 正向用例 ------
+
+- case_id: "plan_gen_001"
+  title: "正常生成计划 - 半马目标_男性_中等强度"
+  data:
+    gender: 1
+    heightValue: "175"
+    heightUnit: "cm"
+    weightValue: "70"
+    weightUnit: "kg"
+    trainingGoal: "half_marathon"
+    planCompletionWeeks: 12
+    trainingSchedule:
+      - "MONDAY"
+      - "WEDNESDAY"
+      - "FRIDAY"
+      - "SATURDAY"
+      - "SUNDAY"
+    lsdSchedule: "SUNDAY"
+    age: 28
+    intensity: "medium"
+    trainingHistory:
+      paceDTO:
+        pace5km: "5'30\""
+        pace10km: "5'45\""
+      heartRateDTO:
+        heartRate: 160
+      fiveKm:
+        pace: "5'30\""
+        heartRate: "160"
+  expected:
+    status_code: 200
+    code: 0
+
+- case_id: "plan_gen_002"
+  title: "正常生成计划 - 5km目标_女性_低强度"
+  data:
+    gender: 0
+    heightValue: "162"
+    heightUnit: "cm"
+    weightValue: "52"
+    weightUnit: "kg"
+    trainingGoal: "5km"
+    planCompletionWeeks: 8
+    trainingSchedule:
+      - "TUESDAY"
+      - "THURSDAY"
+      - "SATURDAY"
+      - "SUNDAY"
+    lsdSchedule: "SUNDAY"
+    age: 25
+    intensity: "low"
+    trainingHistory:
+      paceDTO:
+        pace5km: "7'00\""
+      heartRateDTO:
+        heartRate: 150
+      fiveKm:
+        pace: "7'00\""
+        heartRate: "150"
+  expected:
+    status_code: 200
+    code: 0
+
+- case_id: "plan_gen_003"
+  title: "正常生成计划 - 全马目标_高强度"
+  data:
+    gender: 1
+    heightValue: "180"
+    heightUnit: "cm"
+    weightValue: "75"
+    weightUnit: "kg"
+    trainingGoal: "full_marathon"
+    planCompletionWeeks: 16
+    trainingSchedule:
+      - "MONDAY"
+      - "TUESDAY"
+      - "THURSDAY"
+      - "FRIDAY"
+      - "SUNDAY"
+    lsdSchedule: "SUNDAY"
+    age: 32
+    intensity: "high"
+    trainingHistory:
+      paceDTO:
+        pace5km: "4'30\""
+        pace10km: "4'50\""
+        paceHalfMarathon: "5'10\""
+      heartRateDTO:
+        heartRate: 175
+      fiveKm:
+        pace: "4'30\""
+        heartRate: "170"
+      tenKm:
+        pace: "4'50\""
+        heartRate: "172"
+      halfMarathon:
+        pace: "5'10\""
+        heartRate: "168"
+  expected:
+    status_code: 200
+    code: 0
+
+# ------ 异常用例 ------
+
+- case_id: "plan_gen_err_001"
+  title: "生成失败 - 缺少必填字段 trainingGoal"
+  data:
+    gender: 1
+    heightValue: "175"
+    heightUnit: "cm"
+    weightValue: "70"
+    weightUnit: "kg"
+    # trainingGoal 故意缺失
+    planCompletionWeeks: 12
+    trainingSchedule:
+      - "MONDAY"
+      - "WEDNESDAY"
+      - "SUNDAY"
+    lsdSchedule: "SUNDAY"
+    age: 28
+    trainingHistory: {}
+  expected:
+    status_code: 200
+    code_not: 0
+
+- case_id: "plan_gen_err_002"
+  title: "生成失败 - 训练排期为空"
+  data:
+    gender: 1
+    heightValue: "175"
+    heightUnit: "cm"
+    weightValue: "70"
+    weightUnit: "kg"
+    trainingGoal: "half_marathon"
+    planCompletionWeeks: 12
+    trainingSchedule: []
+    lsdSchedule: "SATURDAY"
+    age: 28
+    trainingHistory: {}
+  expected:
+    status_code: 200
+    code_not: 0
