@@ -23,6 +23,7 @@ import pytest
 
 from api.plan_api import PlanAPI
 from api.settlement_api import SettlementAPI
+from api.statistics_api import StatisticsAPI
 from api.workout_api import WorkoutAPI
 from common.http_client import HttpClient
 from config.settings import settings
@@ -87,3 +88,13 @@ def settlement_api(runner_client):
     已包含用户认证头，可直接调用结算相关的所有接口。
     """
     return SettlementAPI(runner_client)
+
+
+@pytest.fixture(scope="session")
+def statistics_api(runner_client):
+    """
+    跑步统计模块 API
+
+    已包含用户认证头，可直接调用统计相关的所有接口。
+    """
+    return StatisticsAPI(runner_client)
