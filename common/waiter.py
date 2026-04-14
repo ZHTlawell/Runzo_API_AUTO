@@ -140,3 +140,55 @@ def wait_for_plan_ready(mongo_db, user_id: str, timeout: int = 120, interval: in
         interval=interval,
         desc=f"等待计划生成完成 (createBy={user_id})",
     )
+
+
+def wait_for_log_ready(settlement_api, log_id: str, timeout: int = 60, interval: int = 3):
+    """
+    等待训练日志分析完成
+
+    训练结束后，服务端会自动触发 feedback/analyze 异步分析训练数据。
+    通过轮询 log/ready 接口判断分析是否完成（日志 + 反馈 + 计划调整全部就绪）。
+
+    流程:
+        workout/end 或 watch-settle → feedback/analyze(自动触发)
+        → 轮询 log/ready → data=true 表示就绪
+
+    Args:
+        settlement_api: SettlementAPI 实例
+        log_id: 训练日志ID（从 end 响应或 watch-settle 响应获取）
+        timeout: 最长等待时间（秒），默认 60 秒
+        interval: 轮询间隔（秒），默认 3 秒
+
+    Returns:
+        True（日志已就绪）
+
+    Raises:
+        TimeoutError: 超时日志仍未就绪
+    """
+
+    def _check_log_ready():
+        """内部条件函数：调用 log/ready 接口检查状态"""
+        resp = settlement_api.log_ready(log_id)
+        if resp.status_code != 200:
+            log.warning(f"log/ready 请求失败: status={resp.status_code}")
+            return None
+
+        resp_data = resp.json()
+        if resp_data.get("code") != 0:
+            log.debug(f"log/ready 业务异常: {resp_data}")
+            return None
+
+        is_ready = resp_data.get("data")
+        if is_ready:
+            log.info(f"训练日志已就绪: logId={log_id}")
+            return True
+
+        log.debug(f"训练日志未就绪: logId={log_id}, data={is_ready}")
+        return None
+
+    return poll_until(
+        condition_fn=_check_log_ready,
+        timeout=timeout,
+        interval=interval,
+        desc=f"等待训练日志就绪 (logId={log_id})",
+    )

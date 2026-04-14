@@ -22,6 +22,8 @@ Scope 说明:
 import pytest
 
 from api.plan_api import PlanAPI
+from api.settlement_api import SettlementAPI
+from api.workout_api import WorkoutAPI
 from common.http_client import HttpClient
 from config.settings import settings
 
@@ -65,3 +67,23 @@ def plan_api(runner_client):
     已包含用户认证头，可直接调用计划相关的所有接口。
     """
     return PlanAPI(runner_client)
+
+
+@pytest.fixture(scope="session")
+def workout_api(runner_client):
+    """
+    跑步训练模块 API
+
+    已包含用户认证头，可直接调用训练相关的所有接口。
+    """
+    return WorkoutAPI(runner_client)
+
+
+@pytest.fixture(scope="session")
+def settlement_api(runner_client):
+    """
+    跑步结算模块 API
+
+    已包含用户认证头，可直接调用结算相关的所有接口。
+    """
+    return SettlementAPI(runner_client)
