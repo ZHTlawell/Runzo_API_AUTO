@@ -24,9 +24,12 @@ Workout 训练模块接口
 """
 from __future__ import annotations
 
+import time
+
 import allure
 
 from api.base_api import BaseAPI
+from common.logger import log
 
 
 class WorkoutAPI(BaseAPI):
@@ -242,7 +245,23 @@ class WorkoutAPI(BaseAPI):
         if city:
             payload["city"] = city
 
-        return self.client.post(f"{self.PREFIX}/end", json=payload)
+        # 重试机制：规避服务端 MongoDB WriteConflict (Error 112)
+        # 当多个异步任务并发写同一文档时可能发生，属于瞬态错误，重试即可
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            resp = self.client.post(f"{self.PREFIX}/end", json=payload)
+            resp_data = resp.json()
+            if resp_data.get("code") == 0:
+                return resp
+            if attempt < max_retries:
+                log.warning(
+                    f"workout/end 失败(第{attempt}次): {resp_data.get('msg')}, "
+                    f"{3}s 后重试..."
+                )
+                time.sleep(3)
+            else:
+                log.error(f"workout/end 重试{max_retries}次仍失败: {resp_data}")
+                return resp
 
     # ========== 6. 中止跑步 ==========
 

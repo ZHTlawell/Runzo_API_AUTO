@@ -329,9 +329,14 @@ class SettlementAPI(BaseAPI):
 
     @allure.step("获取训练后教练来信")
     def coach_letter(self, daily_id: str):
-        """获取本次训练后教练的反馈信"""
+        """
+        获取本次训练后教练的反馈信
+
+        注意: 教练来信可能由 LLM 生成，耗时较长，超时设为 60 秒。
+        """
         return self.client.get(
-            f"{self.PREFIX}/coach/letter", params={"dailyId": daily_id}
+            f"{self.PREFIX}/coach/letter", params={"dailyId": daily_id},
+            timeout=60,
         )
 
     @allure.step("获取休息日教练来信")

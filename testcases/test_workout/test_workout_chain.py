@@ -35,6 +35,19 @@ from common.run_simulator import RunSimulator
 from common.waiter import wait_for_plan_ready
 
 
+@pytest.fixture(autouse=True)
+def workout_cooldown():
+    """
+    每个用例执行后等待 3 秒，规避 MongoDB WriteConflict
+
+    原因: workout/end 触发的异步任务（feedback/analyze 等）会并发写 MongoDB，
+    如果下一个用例的 start 或 end 操作太快，同一文档会产生写冲突（Error 112）。
+    加入短暂冷却时间，让上一个用例的异步写入完成。
+    """
+    yield
+    time.sleep(3)
+
+
 @pytest.fixture(scope="module")
 def plan_generate_and_get_daily(runner_client, plan_api, auth_user, mongo_db):
     """
@@ -46,16 +59,22 @@ def plan_generate_and_get_daily(runner_client, plan_api, auth_user, mongo_db):
     Returns:
         dict: {"plan_id": "xxx", "daily_id": "xxx", "training_type": "xxx"}
     """
-    # 尝试从缓存复用
-    existing_daily = cache.get("daily_id")
+    # 尝试从缓存复用（需要重新获取多个 dailyId，因为每个用例需要独立的）
     existing_plan = cache.get("plan_id")
-    if existing_daily and existing_plan:
-        log.info(f"复用已有计划: planId={existing_plan}, dailyId={existing_daily}")
-        return {
-            "plan_id": existing_plan,
-            "daily_id": existing_daily,
-            "training_type": cache.get("training_type", "EasyRun"),
-        }
+    if existing_plan:
+        log.info(f"复用已有计划: planId={existing_plan}，重新获取 dailyId 列表")
+        week_resp = plan_api.training_week_list(existing_plan)
+        week_data = week_resp.json().get("data", [])
+        all_dailies = []
+        for week in (week_data if isinstance(week_data, list) else [week_data]):
+            for dt in week.get("dailyTrainings", []):
+                if dt.get("dailyId"):
+                    all_dailies.append({
+                        "daily_id": dt["dailyId"],
+                        "training_type": dt.get("trainingType", "EasyRun"),
+                    })
+        if len(all_dailies) >= 4:
+            return {"plan_id": existing_plan, "dailies": all_dailies}
 
     # 重新生成计划
     user_id = auth_user["userId"]
@@ -91,25 +110,24 @@ def plan_generate_and_get_daily(runner_client, plan_api, auth_user, mongo_db):
     week_resp = plan_api.training_week_list(plan_id)
     week_data = week_resp.json().get("data", [])
 
-    daily_id = None
-    training_type = "EasyRun"
+    # 收集所有可用的 dailyId（每个用例需要独立的 dailyId，因为 end 后不可复用）
+    all_dailies = []
     for week in (week_data if isinstance(week_data, list) else [week_data]):
         for dt in week.get("dailyTrainings", []):
             if dt.get("dailyId"):
-                daily_id = dt["dailyId"]
-                training_type = dt.get("trainingType", "EasyRun")
-                break
-        if daily_id:
-            break
+                all_dailies.append({
+                    "daily_id": dt["dailyId"],
+                    "training_type": dt.get("trainingType", "EasyRun"),
+                })
 
-    assert daily_id, "未找到可用的 dailyId"
+    assert len(all_dailies) >= 4, f"可用 dailyId 不足4个（需要4个用例各用1个），实际: {len(all_dailies)}"
 
     cache.set("plan_id", plan_id)
-    cache.set("daily_id", daily_id)
-    cache.set("training_type", training_type)
+    cache.set("daily_id", all_dailies[0]["daily_id"])
+    cache.set("training_type", all_dailies[0]["training_type"])
 
-    log.info(f"计划就绪: planId={plan_id}, dailyId={daily_id}, type={training_type}")
-    return {"plan_id": plan_id, "daily_id": daily_id, "training_type": training_type}
+    log.info(f"计划就绪: planId={plan_id}, 可用dailyId数={len(all_dailies)}")
+    return {"plan_id": plan_id, "dailies": all_dailies}
 
 
 @allure.feature("跑步训练")
@@ -137,7 +155,7 @@ class TestWorkoutFullChain:
 
         流程: start → upload-track-points(分批) → end
         """
-        daily_id = plan_generate_and_get_daily["daily_id"]
+        daily_id = plan_generate_and_get_daily["dailies"][0]["daily_id"]
         start_time_ms = int(time.time() * 1000)
 
         # ===== Step 1: 开始跑步 =====
@@ -243,7 +261,7 @@ class TestWorkoutPauseResume:
         3. resume → 上传第二段轨迹
         4. end → 验证总数据 = 第一段 + 第二段（暂停期间不算）
         """
-        daily_id = plan_generate_and_get_daily["daily_id"]
+        daily_id = plan_generate_and_get_daily["dailies"][1]["daily_id"]
         start_time_ms = int(time.time() * 1000)
 
         # Step 1: 开始跑步
@@ -395,7 +413,7 @@ class TestWorkoutInterruptRecovery:
         5. 正常 end
         6. 验证总数据完整性
         """
-        daily_id = plan_generate_and_get_daily["daily_id"]
+        daily_id = plan_generate_and_get_daily["dailies"][2]["daily_id"]
         start_time_ms = int(time.time() * 1000)
 
         # ===== Step 1: 开始跑步 =====
@@ -574,7 +592,7 @@ class TestWorkoutDiscard:
 
         流程: start → 上传少量轨迹 → discard → 验证状态
         """
-        daily_id = plan_generate_and_get_daily["daily_id"]
+        daily_id = plan_generate_and_get_daily["dailies"][3]["daily_id"]
         start_time_ms = int(time.time() * 1000)
 
         # Step 1: 开始跑步
