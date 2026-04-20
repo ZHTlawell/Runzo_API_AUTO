@@ -47,9 +47,10 @@ pipeline {
 
     environment {
         ALLURE_RESULTS = 'reports/allure-results'
-        // 飞书 Webhook 从 Jenkins 凭据中读取（Credentials ID: feishu-webhook）
-        // 如果未配置凭据，可以直接写 URL（不推荐）
+        // 飞书 Webhook（推荐通过 Jenkins Credentials 管理，ID: feishu-webhook）
+        // 如已配置凭据，取消下行注释并删除直接赋值行：
         // FEISHU_WEBHOOK = credentials('feishu-webhook')
+        FEISHU_WEBHOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/060e25e7-7635-4a83-9050-c291fb20c386'
     }
 
     stages {
