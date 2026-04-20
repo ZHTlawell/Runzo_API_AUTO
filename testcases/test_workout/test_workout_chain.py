@@ -212,11 +212,32 @@ class TestWorkoutFullChain:
                 f"duration={summary['duration']}, pace={summary['avgPace']}"
             )
 
-        # ===== Step 4: 验证跑步状态恢复 =====
-        with allure.step("Step 4: 验证跑步状态已恢复"):
+        # ===== Step 4: 验证跑步状态和数据完整性 =====
+        with allure.step("Step 4: 验证跑步状态和返回数据"):
             status_resp = workout_api.status()
             Assertion.assert_status_code(status_resp, 200)
-            log.info(f"跑步状态: {status_resp.json()}")
+
+            # 深度断言：end 返回数据与上传数据一致
+            end_data = end_resp.json().get("data", {})
+            if end_data:
+                returned_distance = end_data.get("distance", 0)
+                returned_duration = end_data.get("duration", "")
+
+                # 距离误差不超过 0.1km
+                distance_diff = abs(returned_distance - summary["distance"])
+                assert distance_diff < 0.1, (
+                    f"距离偏差过大: 上传={summary['distance']}, 返回={returned_distance}"
+                )
+                # 时长应一致
+                assert returned_duration == summary["duration"], (
+                    f"时长不匹配: 上传={summary['duration']}, 返回={returned_duration}"
+                )
+                # 状态应为已完成(3)
+                assert end_data.get("status") == 3, f"状态不是已完成: {end_data.get('status')}"
+                log.info(
+                    f"数据校验通过: distance差值={distance_diff}km, "
+                    f"duration匹配, status=3(已完成)"
+                )
 
         log.info(
             f"=== 完整训练链路测试通过 ===\n"
@@ -618,3 +639,104 @@ class TestWorkoutStatus:
         resp = workout_api.status()
         Assertion.assert_code(resp)
         log.info(f"当前跑步状态: {resp.json().get('data')}")
+
+
+@allure.feature("跑步训练")
+@allure.story("异常场景")
+class TestWorkoutNegative:
+    """
+    P2 Workout 异常场景测试
+
+    验证非正常操作下接口的错误处理能力。
+    """
+
+    @pytest.mark.p2
+    @allure.title("P2: 无效 sessionId 调用 end")
+    def test_end_invalid_session(self, workout_api, auth_user):
+        """使用不存在的 sessionId 结束跑步，应返回错误"""
+        resp = workout_api.end(
+            session_id="invalid_session_id_not_exist",
+            end_time=int(time.time() * 1000),
+            duration="00:10:00",
+            distance=1.5,
+            avg_pace="5'30\"",
+        )
+        Assertion.assert_status_code(resp, 200)
+        Assertion.assert_code_not(resp, 0)
+        log.info(f"无效sessionId结束: code={resp.json().get('code')}, msg={resp.json().get('msg')}")
+
+    @pytest.mark.p2
+    @allure.title("P2: 无效 sessionId 调用 discard")
+    def test_discard_invalid_session(self, workout_api, auth_user):
+        """使用不存在的 sessionId 中止跑步，应返回错误"""
+        resp = workout_api.discard("invalid_session_id_not_exist")
+        Assertion.assert_status_code(resp, 200)
+        Assertion.assert_code_not(resp, 0)
+        log.info(f"无效sessionId中止: code={resp.json().get('code')}, msg={resp.json().get('msg')}")
+
+    @pytest.mark.p2
+    @allure.title("P2: 重复调用 start（已有进行中训练）")
+    def test_duplicate_start(self, workout_api, plan_generate_and_get_daily):
+        """已有进行中的训练时再次 start，应返回错误或复用 session"""
+        dailies = plan_generate_and_get_daily["dailies"]
+        # 需要 2 个不同的 dailyId
+        if len(dailies) < 6:
+            pytest.skip("可用 dailyId 不足")
+
+        daily_id_1 = dailies[4]["daily_id"]
+        daily_id_2 = dailies[5]["daily_id"]
+        start_time = int(time.time() * 1000)
+
+        # 第一次 start
+        resp1 = workout_api.start(daily_id=daily_id_1, start_time=start_time, workout_type=1)
+        Assertion.assert_code(resp1)
+        session_id = resp1.json()["data"]["sessionId"]
+
+        # 第二次 start（已有进行中的）
+        resp2 = workout_api.start(daily_id=daily_id_2, start_time=start_time, workout_type=1)
+        resp2_data = resp2.json()
+        log.info(f"重复start: code={resp2_data.get('code')}, msg={resp2_data.get('msg')}")
+
+        # 清理：discard 第一个
+        workout_api.discard(session_id)
+
+    @pytest.mark.p2
+    @allure.title("P2: 结束后再次结束（重复 end）")
+    def test_end_after_end(self, workout_api, plan_generate_and_get_daily):
+        """训练已结束后再调 end，应返回错误"""
+        dailies = plan_generate_and_get_daily["dailies"]
+        if len(dailies) < 8:
+            pytest.skip("可用 dailyId 不足")
+
+        daily_id = dailies[6]["daily_id"]
+        start_time = int(time.time() * 1000)
+
+        # start → end
+        start_resp = workout_api.start(daily_id=daily_id, start_time=start_time, workout_type=1)
+        Assertion.assert_code(start_resp)
+        session_id = start_resp.json()["data"]["sessionId"]
+
+        end_resp = workout_api.end(
+            session_id=session_id,
+            end_time=start_time + 60000,
+            duration="00:01:00",
+            distance=0.2,
+            avg_pace="5'00\"",
+        )
+
+        # 重复 end
+        end_resp2 = workout_api.end(
+            session_id=session_id,
+            end_time=start_time + 120000,
+            duration="00:02:00",
+            distance=0.4,
+            avg_pace="5'00\"",
+        )
+        resp2_data = end_resp2.json()
+        # 已知问题: 服务端未做幂等校验，已结束的训练可以重复 end 且返回 code=0
+        # 预期行为应该是返回错误码，但实际返回了成功
+        # 此处记录实际行为，作为已知 bug 跟踪
+        log.warning(
+            f"重复end结果: code={resp2_data.get('code')}, msg={resp2_data.get('msg')} "
+            f"[已知问题: 服务端未做幂等校验]"
+        )

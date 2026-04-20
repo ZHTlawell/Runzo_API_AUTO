@@ -358,3 +358,77 @@ class TestSettlementEvaluation:
         )
         Assertion.assert_status_code(resp, 200)
         log.info(f"训练评价: code={resp.json().get('code')}")
+
+
+@allure.feature("训练结算")
+@allure.story("异常场景")
+class TestSettlementNegative:
+    """
+    P2 Settlement 异常场景测试
+
+    验证无效 logId / dailyId 下各接口的错误处理。
+    """
+
+    INVALID_LOG_ID = "invalid_log_id_not_exist"
+    INVALID_DAILY_ID = "invalid_daily_id_not_exist"
+
+    @pytest.mark.p2
+    @allure.title("P2: 无效 logId 查询日志详情")
+    def test_log_details_invalid(self, settlement_api, auth_user):
+        """不存在的 logId 查详情，应返回错误或空数据"""
+        resp = settlement_api.log_details(self.INVALID_LOG_ID)
+        Assertion.assert_status_code(resp, 200)
+        resp_data = resp.json()
+        # 无效 logId 不应返回正常数据
+        assert resp_data.get("code") != 0 or resp_data.get("data") is None, (
+            f"无效logId不应返回正常数据: {resp_data}"
+        )
+        log.info(f"无效logId查详情: code={resp_data.get('code')}, msg={resp_data.get('msg')}")
+
+    @pytest.mark.p2
+    @allure.title("P2: 无效 logId 查询配速")
+    def test_pace_invalid(self, settlement_api, auth_user):
+        """不存在的 logId 查配速"""
+        resp = settlement_api.pace(self.INVALID_LOG_ID)
+        Assertion.assert_status_code(resp, 200)
+        resp_data = resp.json()
+        assert resp_data.get("code") != 0 or resp_data.get("data") is None, (
+            f"无效logId不应返回配速数据: {resp_data}"
+        )
+        log.info(f"无效logId查配速: code={resp_data.get('code')}")
+
+    @pytest.mark.p2
+    @allure.title("P2: 无效 logId 查询心率")
+    def test_heart_rate_invalid(self, settlement_api, auth_user):
+        """不存在的 logId 查心率"""
+        resp = settlement_api.heart_rate(self.INVALID_LOG_ID)
+        Assertion.assert_status_code(resp, 200)
+        resp_data = resp.json()
+        assert resp_data.get("code") != 0 or resp_data.get("data") is None, (
+            f"无效logId不应返回心率数据: {resp_data}"
+        )
+        log.info(f"无效logId查心率: code={resp_data.get('code')}")
+
+    @pytest.mark.p2
+    @allure.title("P2: 无效 logId 查询每公里表现")
+    def test_kilometer_invalid(self, settlement_api, auth_user):
+        """不存在的 logId 查每公里表现"""
+        resp = settlement_api.kilometer(self.INVALID_LOG_ID)
+        Assertion.assert_status_code(resp, 200)
+        resp_data = resp.json()
+        assert resp_data.get("code") != 0 or resp_data.get("data") is None, (
+            f"无效logId不应返回公里数据: {resp_data}"
+        )
+        log.info(f"无效logId查每公里: code={resp_data.get('code')}")
+
+    @pytest.mark.p2
+    @allure.title("P2: 无效 dailyId 查询教练来信")
+    def test_coach_letter_invalid(self, settlement_api, auth_user):
+        """不存在的 dailyId 查教练来信"""
+        resp = settlement_api.coach_letter(self.INVALID_DAILY_ID)
+        Assertion.assert_status_code(resp, 200)
+        resp_data = resp.json()
+        assert resp_data.get("code") != 0 or resp_data.get("data") is None, (
+            f"无效dailyId不应返回教练来信: {resp_data}"
+        )
+        log.info(f"无效dailyId查教练来信: code={resp_data.get('code')}")

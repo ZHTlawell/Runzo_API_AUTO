@@ -184,6 +184,12 @@ class TestPlanGenerate:
             assert plan_id, f"无法提取 planId: {plan_obj}"
             log.info(f"获取到 planId: {plan_id}")
 
+            # 深度断言：校验计划关键字段与入参一致
+            total_weeks = plan_obj.get("totalWeeks")
+            assert total_weeks == 12, f"计划周数不匹配: 期望12, 实际{total_weeks}"
+            assert plan_obj.get("totalDistance", 0) > 0, "计划总距离应大于0"
+            log.info(f"字段校验通过: totalWeeks={total_weeks}, totalDistance={plan_obj.get('totalDistance')}")
+
             # 存入全局缓存
             cache.set("plan_id", plan_id)
 
@@ -193,7 +199,19 @@ class TestPlanGenerate:
             Assertion.assert_code(week_resp)
 
             week_data = week_resp.json()
-            log.info("周计划查询成功")
+            week_list = week_data.get("data", [])
+
+            # 深度断言：周计划数量应大于0且有训练数据
+            assert len(week_list) > 0, "周计划列表为空"
+            first_week = week_list[0] if isinstance(week_list, list) else week_list
+            week_stats = first_week.get("weekStatistics", {})
+            assert week_stats.get("totalDistance", 0) > 0, "第一周总距离应大于0"
+            assert week_stats.get("totalRunDays", 0) > 0, "第一周训练天数应大于0"
+            log.info(
+                f"周计划校验通过: 周数={len(week_list)}, "
+                f"第一周距离={week_stats.get('totalDistance')}km, "
+                f"训练天数={week_stats.get('totalRunDays')}"
+            )
 
         # ===== Step 5: 从周计划中提取 dailyId =====
         with allure.step("Step 5: 从周计划数据中提取 dailyId"):

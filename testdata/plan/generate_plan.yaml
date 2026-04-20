@@ -159,3 +159,82 @@
   expected:
     status_code: 200
     code_not: 0
+
+- case_id: "plan_gen_err_003"
+  title: "生成失败 - 非法训练目标"
+  data:
+    gender: 1
+    heightValue: "175"
+    heightUnit: "cm"
+    weightValue: "70"
+    weightUnit: "kg"
+    trainingGoal: "invalid_goal"
+    planCompletionWeeks: 12
+    trainingSchedule:
+      - "MONDAY"
+      - "WEDNESDAY"
+      - "SUNDAY"
+    lsdSchedule: "SUNDAY"
+    age: 28
+    trainingHistory: {}
+  expected:
+    status_code: 200
+    code_not: 0
+
+- case_id: "plan_gen_err_004"
+  title: "生成失败 - 缺少身高体重"
+  data:
+    gender: 1
+    trainingGoal: "half_marathon"
+    planCompletionWeeks: 12
+    trainingSchedule:
+      - "MONDAY"
+      - "WEDNESDAY"
+      - "SUNDAY"
+    lsdSchedule: "SUNDAY"
+    age: 28
+    trainingHistory: {}
+  expected:
+    status_code: 200
+    code_not: 0
+
+- case_id: "plan_gen_err_005"
+  title: "生成失败 - 年龄为0"
+  data:
+    gender: 1
+    heightValue: "175"
+    heightUnit: "cm"
+    weightValue: "70"
+    weightUnit: "kg"
+    trainingGoal: "half_marathon"
+    planCompletionWeeks: 12
+    trainingSchedule:
+      - "MONDAY"
+      - "WEDNESDAY"
+      - "SUNDAY"
+    lsdSchedule: "SUNDAY"
+    age: 0
+    trainingHistory: {}
+  expected:
+    status_code: 200
+    code_not: 0
+
+- case_id: "plan_gen_err_006"
+  title: "生成失败 - LSD排期不在训练排期内"
+  data:
+    gender: 1
+    heightValue: "175"
+    heightUnit: "cm"
+    weightValue: "70"
+    weightUnit: "kg"
+    trainingGoal: "half_marathon"
+    planCompletionWeeks: 12
+    trainingSchedule:
+      - "MONDAY"
+      - "WEDNESDAY"
+    lsdSchedule: "SUNDAY"
+    age: 28
+    trainingHistory: {}
+  expected:
+    status_code: 200
+    code_not: 0
