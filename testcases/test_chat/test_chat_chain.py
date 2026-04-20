@@ -105,9 +105,8 @@ class TestChatFullChain:
         # Step 1: 创建 session
         with allure.step("Step 1: 创建对话 Session"):
             session_resp = chat_api.create_session()
-            Assertion.assert_status_code(session_resp, 200)
+            Assertion.assert_code(session_resp)
             session_data = session_resp.json()
-            assert session_data.get("code") == 0, f"创建 session 失败: {session_data}"
 
             data = session_data.get("data", {})
             session_id = data.get("sessionId") if isinstance(data, dict) else str(data)
@@ -141,9 +140,8 @@ class TestChatFullChain:
         # Step 3: 查询历史消息
         with allure.step("Step 3: 查询历史对话消息"):
             msgs_resp = chat_api.session_messages(session_id)
-            Assertion.assert_status_code(msgs_resp, 200)
+            Assertion.assert_code(msgs_resp)
             msgs_data = msgs_resp.json()
-            assert msgs_data.get("code") == 0, f"查询历史消息失败: {msgs_data}"
 
             messages = msgs_data.get("data", [])
             log.info(f"历史消息: 共 {len(messages)} 条")
@@ -166,20 +164,16 @@ class TestChatSession:
     def test_session_unfinish(self, chat_api, plan_for_chat):
         """查询是否有未结束的对话 session"""
         resp = chat_api.session_unfinish()
-        Assertion.assert_status_code(resp, 200)
-        resp_data = resp.json()
-        assert resp_data.get("code") == 0, f"查询未结束 session 失败: {resp_data}"
-        log.info(f"未结束 session: {resp_data.get('data')}")
+        Assertion.assert_code(resp)
+        log.info(f"未结束 session: {resp.json().get('data')}")
 
     @pytest.mark.p1
     @allure.title("P1: 获取对话默认提示词")
     def test_chat_tips(self, chat_api, plan_for_chat):
         """获取 AI 对话的默认提示词列表"""
         resp = chat_api.chat_tips()
-        Assertion.assert_status_code(resp, 200)
-        resp_data = resp.json()
-        assert resp_data.get("code") == 0, f"获取提示词失败: {resp_data}"
-        tips = resp_data.get("data", [])
+        Assertion.assert_code(resp)
+        tips = resp.json().get("data", [])
         log.info(f"提示词: 共 {len(tips) if isinstance(tips, list) else 0} 条")
 
     @pytest.mark.p1

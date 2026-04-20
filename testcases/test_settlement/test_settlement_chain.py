@@ -211,9 +211,7 @@ class TestSettlementFullChain:
         # Step 1: 查询训练日志详情
         with allure.step("Step 1: 查询训练日志详情"):
             details_resp = settlement_api.log_details(log_id)
-            Assertion.assert_status_code(details_resp, 200)
-            details_data = details_resp.json()
-            assert details_data.get("code") == 0, f"查询日志详情失败: {details_data}"
+            Assertion.assert_code(details_resp)
             log.info(f"日志详情查询成功: logId={log_id}")
 
         # Step 2: 查询配速（手机有GPS，配速有数据）

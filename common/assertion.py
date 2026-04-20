@@ -37,6 +37,82 @@ class Assertion:
             log.info(f"断言通过: status_code == {expected}")
 
     @staticmethod
+    def assert_code(response: Response, expected: int = 0):
+        """
+        断言业务状态码（code 字段）
+
+        同时校验 HTTP 状态码 200 和业务 code 值。
+        这是最常用的断言方法，大部分接口都应该用这个。
+
+        Args:
+            response: Response 对象
+            expected: 期望的业务 code 值，默认 0（成功）
+
+        示例:
+            Assertion.assert_code(response)        # 断言 code == 0
+            Assertion.assert_code(response, 400)   # 断言 code == 400
+        """
+        # 先断言 HTTP 200
+        actual_http = response.status_code
+        with allure.step(f"断言 HTTP 状态码: {actual_http}"):
+            if actual_http != 200:
+                _attach_failure_detail(response, f"HTTP 状态码异常: {actual_http}")
+            assert actual_http == 200, (
+                f"HTTP 状态码异常: {actual_http}\n"
+                f"响应内容: {response.text[:500]}"
+            )
+
+        # 再断言业务 code
+        try:
+            resp_json = response.json()
+        except ValueError:
+            raise AssertionError(f"响应不是有效的 JSON: {response.text[:200]}")
+
+        actual_code = resp_json.get("code")
+        msg = resp_json.get("msg", "")
+
+        with allure.step(f"断言业务状态码: 期望={expected}, 实际={actual_code}, msg={msg}"):
+            if actual_code != expected:
+                _attach_failure_detail(
+                    response,
+                    f"业务状态码不匹配: 期望 code={expected}, 实际 code={actual_code}, msg={msg}",
+                )
+            assert actual_code == expected, (
+                f"业务状态码断言失败:\n"
+                f"  期望: code={expected}\n"
+                f"  实际: code={actual_code}\n"
+                f"  消息: {msg}\n"
+                f"  URL: {response.url}"
+            )
+            log.info(f"断言通过: code == {expected} (msg={msg})")
+
+    @staticmethod
+    def assert_code_not(response: Response, unexpected: int):
+        """
+        断言业务状态码不等于某个值
+
+        用于异常测试: 验证接口不应该返回成功（code != 0）。
+
+        Args:
+            response: Response 对象
+            unexpected: 不期望的业务 code 值
+        """
+        try:
+            resp_json = response.json()
+        except ValueError:
+            raise AssertionError(f"响应不是有效的 JSON: {response.text[:200]}")
+
+        actual_code = resp_json.get("code")
+        msg = resp_json.get("msg", "")
+
+        with allure.step(f"断言业务状态码不等于: {unexpected}, 实际={actual_code}"):
+            assert actual_code != unexpected, (
+                f"业务状态码断言失败: 不期望 code={unexpected}, 但实际就是 {actual_code}\n"
+                f"  消息: {msg}"
+            )
+            log.info(f"断言通过: code != {unexpected} (实际={actual_code}, msg={msg})")
+
+    @staticmethod
     def assert_json_path(response: Response, path: str, expected_value):
         """
         断言 JSON 响应中指定路径的值

@@ -165,9 +165,8 @@ class TestWorkoutFullChain:
                 start_time=start_time_ms,
                 workout_type=1,
             )
-            Assertion.assert_status_code(start_resp, 200)
+            Assertion.assert_code(start_resp)
             start_data = start_resp.json()
-            assert start_data.get("code") == 0, f"开始跑步失败: {start_data}"
 
             session_id = start_data.get("data", {}).get("sessionId")
             assert session_id, f"sessionId 为空: {start_data}"
@@ -189,11 +188,7 @@ class TestWorkoutFullChain:
 
             for i, batch in enumerate(batches):
                 upload_resp = workout_api.upload_track_points(session_id, batch)
-                Assertion.assert_status_code(upload_resp, 200)
-                upload_data = upload_resp.json()
-                assert upload_data.get("code") == 0, (
-                    f"第 {i+1} 批轨迹上传失败: {upload_data}"
-                )
+                Assertion.assert_code(upload_resp)
             log.info(f"轨迹上传完成: {len(batches)} 批全部成功")
 
         # ===== Step 3: 结束跑步 =====
@@ -211,9 +206,7 @@ class TestWorkoutFullChain:
                 country="CN",
                 city="Shanghai",
             )
-            Assertion.assert_status_code(end_resp, 200)
-            end_data = end_resp.json()
-            assert end_data.get("code") == 0, f"结束跑步失败: {end_data}"
+            Assertion.assert_code(end_resp)
             log.info(
                 f"跑步结束: distance={summary['distance']}km, "
                 f"duration={summary['duration']}, pace={summary['avgPace']}"
@@ -271,10 +264,8 @@ class TestWorkoutPauseResume:
                 start_time=start_time_ms,
                 workout_type=1,
             )
-            Assertion.assert_status_code(start_resp, 200)
-            start_data = start_resp.json()
-            assert start_data.get("code") == 0, f"开始跑步失败: {start_data}"
-            session_id = start_data["data"]["sessionId"]
+            Assertion.assert_code(start_resp)
+            session_id = start_resp.json()["data"]["sessionId"]
             log.info(f"跑步开始: sessionId={session_id}")
 
         # Step 2: 上传第一段轨迹（模拟跑5分钟）
@@ -289,7 +280,7 @@ class TestWorkoutPauseResume:
 
             for batch in sim_phase1.get_track_point_batches():
                 resp = workout_api.upload_track_points(session_id, batch)
-                assert resp.json().get("code") == 0
+                Assertion.assert_code(resp)
 
             log.info(f"第一段轨迹上传完成: {len(points_phase1)} 个点, distance={summary_phase1['distance']}km")
 
@@ -297,9 +288,7 @@ class TestWorkoutPauseResume:
         pause_time_ms = start_time_ms + 5 * 60 * 1000
         with allure.step("Step 3: 暂停跑步"):
             pause_resp = workout_api.pause(session_id, pause_time_ms)
-            Assertion.assert_status_code(pause_resp, 200)
-            pause_data = pause_resp.json()
-            assert pause_data.get("code") == 0, f"暂停失败: {pause_data}"
+            Assertion.assert_code(pause_resp)
             log.info("跑步已暂停")
 
         # 模拟暂停30秒
@@ -309,9 +298,7 @@ class TestWorkoutPauseResume:
         resume_time_ms = pause_time_ms + pause_duration_ms
         with allure.step("Step 4: 恢复跑步"):
             resume_resp = workout_api.resume(session_id, resume_time_ms)
-            Assertion.assert_status_code(resume_resp, 200)
-            resume_data = resume_resp.json()
-            assert resume_data.get("code") == 0, f"恢复失败: {resume_data}"
+            Assertion.assert_code(resume_resp)
             log.info("跑步已恢复")
 
         # Step 5: 上传第二段轨迹（恢复后再跑5分钟）
@@ -328,7 +315,7 @@ class TestWorkoutPauseResume:
 
             for batch in sim_phase2.get_track_point_batches():
                 resp = workout_api.upload_track_points(session_id, batch)
-                assert resp.json().get("code") == 0
+                Assertion.assert_code(resp)
 
             log.info(f"第二段轨迹上传完成: {len(points_phase2)} 个点, distance={summary_phase2['distance']}km")
 
@@ -364,9 +351,7 @@ class TestWorkoutPauseResume:
                 country="CN",
                 city="Shanghai",
             )
-            Assertion.assert_status_code(end_resp, 200)
-            end_data = end_resp.json()
-            assert end_data.get("code") == 0, f"结束跑步失败: {end_data}"
+            Assertion.assert_code(end_resp)
 
         log.info(
             f"=== 暂停恢复链路测试通过 ===\n"
@@ -423,10 +408,8 @@ class TestWorkoutInterruptRecovery:
                 start_time=start_time_ms,
                 workout_type=1,
             )
-            Assertion.assert_status_code(start_resp, 200)
-            start_data = start_resp.json()
-            assert start_data.get("code") == 0, f"开始跑步失败: {start_data}"
-            original_session_id = start_data["data"]["sessionId"]
+            Assertion.assert_code(start_resp)
+            original_session_id = start_resp.json()["data"]["sessionId"]
             log.info(f"跑步开始: sessionId={original_session_id}")
 
         # ===== Step 2: 上传第一段轨迹（中断前） =====
@@ -441,7 +424,7 @@ class TestWorkoutInterruptRecovery:
 
             for batch in sim_before.get_track_point_batches():
                 resp = workout_api.upload_track_points(original_session_id, batch)
-                assert resp.json().get("code") == 0
+                Assertion.assert_code(resp)
             log.info(
                 f"中断前轨迹上传完成: {len(points_before)} 个点, "
                 f"distance={summary_before['distance']}km"
@@ -460,9 +443,8 @@ class TestWorkoutInterruptRecovery:
         # ===== Step 4: 重新打开APP，通过 status 恢复 session =====
         with allure.step("Step 4: 重新打开APP → status 接口恢复session"):
             status_resp = workout_api.status()
-            Assertion.assert_status_code(status_resp, 200)
+            Assertion.assert_code(status_resp)
             status_data = status_resp.json()
-            assert status_data.get("code") == 0, f"查询状态失败: {status_data}"
 
             recovered_data = status_data.get("data", {})
             recovered_session_id = recovered_data.get("sessionId")
@@ -497,10 +479,7 @@ class TestWorkoutInterruptRecovery:
 
             for batch in sim_after.get_track_point_batches():
                 resp = workout_api.upload_track_points(recovered_session_id, batch)
-                upload_data = resp.json()
-                assert upload_data.get("code") == 0, (
-                    f"恢复后轨迹上传失败: {upload_data}"
-                )
+                Assertion.assert_code(resp)
             log.info(
                 f"恢复后轨迹上传完成: {len(points_after)} 个点, "
                 f"distance={summary_after['distance']}km"
@@ -536,9 +515,8 @@ class TestWorkoutInterruptRecovery:
                 country="CN",
                 city="Shanghai",
             )
-            Assertion.assert_status_code(end_resp, 200)
+            Assertion.assert_code(end_resp)
             end_data = end_resp.json()
-            assert end_data.get("code") == 0, f"结束跑步失败: {end_data}"
 
         # ===== Step 7: 数据完整性验证 =====
         with allure.step("Step 7: 验证数据完整性"):
@@ -616,9 +594,7 @@ class TestWorkoutDiscard:
         # Step 3: 中止跑步
         with allure.step("Step 3: 中止跑步"):
             discard_resp = workout_api.discard(session_id)
-            Assertion.assert_status_code(discard_resp, 200)
-            discard_data = discard_resp.json()
-            assert discard_data.get("code") == 0, f"中止跑步失败: {discard_data}"
+            Assertion.assert_code(discard_resp)
             log.info("跑步已中止")
 
         # Step 4: 验证跑步状态恢复
@@ -640,7 +616,5 @@ class TestWorkoutStatus:
     def test_query_status(self, workout_api, auth_user):
         """验证跑步状态查询接口正常返回"""
         resp = workout_api.status()
-        Assertion.assert_status_code(resp, 200)
-        resp_data = resp.json()
-        assert resp_data.get("code") == 0, f"查询跑步状态失败: {resp_data}"
-        log.info(f"当前跑步状态: {resp_data.get('data')}")
+        Assertion.assert_code(resp)
+        log.info(f"当前跑步状态: {resp.json().get('data')}")

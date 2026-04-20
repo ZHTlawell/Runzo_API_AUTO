@@ -164,11 +164,9 @@ class TestPlanGenerate:
         # ===== Step 3: 查询计划列表 =====
         with allure.step("Step 3: 查询计划列表，验证计划已创建"):
             list_resp = plan_api.get_list()
-            Assertion.assert_status_code(list_resp, 200)
+            Assertion.assert_code(list_resp)
 
             list_data = list_resp.json()
-            assert list_data.get("code") == 0, f"查询计划列表失败: {list_data}"
-
             data = list_data.get("data")
             assert data, "计划列表 data 为空"
 
@@ -192,10 +190,9 @@ class TestPlanGenerate:
         # ===== Step 4: 查询周计划 =====
         with allure.step("Step 4: 查询周计划训练详情"):
             week_resp = plan_api.training_week_list(plan_id)
-            Assertion.assert_status_code(week_resp, 200)
+            Assertion.assert_code(week_resp)
 
             week_data = week_resp.json()
-            assert week_data.get("code") == 0, f"查询周计划失败: {week_data}"
             log.info("周计划查询成功")
 
         # ===== Step 5: 从周计划中提取 dailyId =====
@@ -220,9 +217,7 @@ class TestPlanGenerate:
 
                 # 查询日计划详情
                 daily_resp = plan_api.training_daily(daily_id)
-                Assertion.assert_status_code(daily_resp, 200)
-                daily_detail = daily_resp.json()
-                assert daily_detail.get("code") == 0, f"查询日计划失败: {daily_detail}"
+                Assertion.assert_code(daily_resp)
                 log.info("日计划详情查询成功")
             else:
                 log.warning("周计划中未找到 dailyId，跳过日计划查询")
@@ -265,12 +260,9 @@ class TestPlanGenerate:
         response = temp_plan_api.generate(data)
         Assertion.assert_status_code(response, expected["status_code"])
 
-        resp_json = response.json()
         if "code_not" in expected:
-            assert resp_json.get("code") != expected["code_not"], (
-                f"期望 code != {expected['code_not']}，实际 code = {resp_json.get('code')}"
-            )
-            log.info(f"异常校验通过: {case_data['case_id']} - code={resp_json.get('code')}")
+            Assertion.assert_code_not(response, expected["code_not"])
+            log.info(f"异常校验通过: {case_data['case_id']} - code={response.json().get('code')}")
 
 
 @allure.feature("训练计划管理")
@@ -288,11 +280,8 @@ class TestPlanQuery:
     def test_plan_status(self, plan_api, auth_user):
         """验证计划状态查询接口可正常返回"""
         response = plan_api.get_status()
-        Assertion.assert_status_code(response, 200)
-
-        resp_json = response.json()
-        assert resp_json.get("code") == 0, f"查询计划状态失败: {resp_json}"
-        log.info(f"计划状态: {resp_json.get('data')}")
+        Assertion.assert_code(response)
+        log.info(f"计划状态: {response.json().get('data')}")
 
     @pytest.mark.p1
     @allure.title("查询4周Block状态")
@@ -303,10 +292,7 @@ class TestPlanQuery:
             pytest.skip("无可用的 planId，需先运行计划生成用例")
 
         response = plan_api.cycle_block_status(plan_id)
-        Assertion.assert_status_code(response, 200)
-
-        resp_json = response.json()
-        assert resp_json.get("code") == 0, f"查询Block状态失败: {resp_json}"
+        Assertion.assert_code(response)
         log.info("4周Block状态查询成功")
 
     @pytest.mark.p1
@@ -314,9 +300,6 @@ class TestPlanQuery:
     def test_plan_list(self, plan_api, auth_user):
         """验证计划列表接口返回正确"""
         response = plan_api.get_list()
-        Assertion.assert_status_code(response, 200)
-
-        resp_json = response.json()
-        assert resp_json.get("code") == 0, f"查询计划列表失败: {resp_json}"
-        plans = resp_json.get("data", [])
+        Assertion.assert_code(response)
+        plans = response.json().get("data", [])
         log.info(f"计划列表: 共 {len(plans)} 个计划")

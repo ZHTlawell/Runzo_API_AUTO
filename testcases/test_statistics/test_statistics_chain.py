@@ -161,11 +161,9 @@ class TestStatisticsScores:
         plan_id = trained_with_calibration["plan_id"]
 
         resp = statistics_api.scores(plan_id)
-        Assertion.assert_status_code(resp, 200)
-        resp_data = resp.json()
-        assert resp_data.get("code") == 0, f"查询三大分数失败: {resp_data}"
+        Assertion.assert_code(resp)
 
-        scores = resp_data.get("data")
+        scores = resp.json().get("data")
         if scores is None:
             log.warning(
                 "三大分数 data=null（start-training 未成功，缺少 calibration report）"
